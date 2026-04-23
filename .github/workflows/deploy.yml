@@ -39,6 +39,7 @@ jobs:
         run: |
           rsync -avz --delete \
             --exclude='.git/' --exclude='target/' --exclude='.idea/' --exclude='.env' \
+            --exclude='docker-compose.override.yml' \
             -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
             ./ ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}:/home/deploy/user-service
 
