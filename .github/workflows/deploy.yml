@@ -1,0 +1,61 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run unit + integration tests
+        run: ./mvnw -B -ntp verify
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_KEY_CI }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy files to droplet
+        run: |
+          rsync -avz --delete \
+            --exclude='.git/' --exclude='target/' --exclude='.idea/' --exclude='.env' \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
+            ./ ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}:/home/deploy/user-service
+
+      - name: Build and run Docker on droplet
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }} << 'EOF'
+            set -euo pipefail
+            cd /home/deploy/user-service
+            if [ ! -f .env ]; then
+              echo "ERROR: /home/deploy/user-service/.env is missing. Provision it once before deploy." >&2
+              exit 1
+            fi
+            docker compose pull postgres
+            docker compose up -d --build --remove-orphans
+          EOF
+
+      - name: Post-deploy readiness probe
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }} \
+            'for i in $(seq 1 30); do curl -sf http://localhost:8081/actuator/health/readiness | grep -q "\"status\":\"UP\"" && exit 0; sleep 2; done; echo "readiness probe timed out" >&2; exit 1'

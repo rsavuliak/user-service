@@ -1,0 +1,9 @@
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    display_name VARCHAR(100),
+    avatar_url VARCHAR(500),
+    settings JSONB NOT NULL DEFAULT '{}',
+    balance DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);

@@ -1,0 +1,25 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# Fixed test fixtures: the secret below decodes to 48 random bytes (> 32-byte HS256 minimum).
+# The internal API key is 48 characters (> 32-char minimum). Both values are documented as
+# fixtures only — never use outside tests.
+jwt:
+  secret: "dGVzdC1zZWNyZXQtZm9yLWp3dC12YWxpZGF0aW9uLW5vdC1yZWFsLWhzMjU2LTQ4Yg=="
+
+internal:
+  api-key: "test-internal-api-key-48-chars-exactly-for-tests!"
+
+cors:
+  allowed-origins: "http://localhost:5173"
+
+app:
+  cookie-name: token

@@ -1,0 +1,15 @@
+target/
+.idea/
+.vscode/
+.git/
+.github/
+.mvn/wrapper/maven-wrapper.jar.lck
+*.iml
+.DS_Store
+.env
+.env.local
+logs/
+*.log
+PLAN.md
+README.md
+auth-service-api/
