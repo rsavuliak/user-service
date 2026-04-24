@@ -17,6 +17,23 @@ Same cookie as the Auth Service — no changes to how the frontend authenticates
 
 CORS is configured; the browser handles preflight automatically.
 
+### Email verification — what this service does (and doesn't) do
+
+- **Source of truth:** the `emailVerified` flag lives on the JWT, not in this service's DB. Every response reads it from the current `token` cookie.
+- **Not enforced here:** this service accepts any valid-token request, verified or not. `GET /me` and `PATCH /me` work exactly the same for unverified users. If a feature should be gated on verification, **the frontend** is responsible for that gate — either by decoding the JWT directly or by checking `UserResponse.emailVerified` from `GET /me`.
+- **Stale by up to ~15 min:** the JWT lifetime caps how quickly a freshly-verified state shows up in `emailVerified`. Three patterns for the frontend:
+  1. **On window focus / route change** — re-fetch `GET /me` to pick up the latest value.
+  2. **When the user just clicked "resend" or returned from a verification link** — call the auth-service's `POST /auth/refresh` **first**, then re-fetch `GET /me`. Refresh rotates the token with the current DB value, so the flag updates immediately.
+  3. **Inside a gated action** — if a button requires verification, and the JWT says `false`, surface "please verify your email" without calling this service; you already know it would succeed server-side (no gate) but your UX gate is a frontend concern.
+- **Do not cache `emailVerified` yourself** beyond the lifetime of the JWT — rely on the JWT's `exp` or re-fetch via `/me`.
+
+```js
+// Typical flow after a verification action elsewhere in the app:
+await fetch("/api/v1/auth/refresh", { method: "POST", credentials: "include" });
+const me = await fetch("/api/v1/users/me", { credentials: "include" }).then(r => r.json());
+// me.emailVerified is now fresh
+```
+
 ---
 
 ## Endpoints
