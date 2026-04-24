@@ -1,0 +1,23 @@
+# Production overlay. Shipped to the droplet by the deploy workflow and used as:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Joins the user-service container to the shared `gateway-network` (managed
+# outside this repo) so nginx-proxy + acme-companion can terminate TLS at
+# https://users.savuliak.com and reverse-proxy to port 8081 inside the container.
+# No host ports are published — host access in production goes only through
+# nginx-proxy on :443.
+
+services:
+  user-service:
+    environment:
+      VIRTUAL_HOST: users.savuliak.com
+      VIRTUAL_PORT: 8081
+      LETSENCRYPT_HOST: users.savuliak.com
+      LETSENCRYPT_EMAIL: savuliak.roman@gmail.com
+    networks:
+      - default
+      - gateway-network
+
+networks:
+  gateway-network:
+    external: true

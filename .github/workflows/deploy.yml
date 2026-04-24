@@ -52,11 +52,24 @@ jobs:
               echo "ERROR: /home/deploy/user-service/.env is missing. Provision it once before deploy." >&2
               exit 1
             fi
-            docker compose pull postgres
-            docker compose up -d --build --remove-orphans
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull postgres
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
           EOF
 
       - name: Post-deploy readiness probe
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }} \
-            'for i in $(seq 1 30); do curl -sf http://localhost:8081/actuator/health/readiness | grep -q "\"status\":\"UP\"" && exit 0; sleep 2; done; echo "readiness probe timed out" >&2; exit 1'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }} << 'EOF'
+            set -euo pipefail
+            cd /home/deploy/user-service
+            for i in $(seq 1 30); do
+              status=$(docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format json user-service 2>/dev/null | grep -o '"Health":"[^"]*"' | head -n1 | cut -d'"' -f4 || true)
+              if [ "$status" = "healthy" ]; then
+                echo "user-service container healthy"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "readiness probe timed out (last status: ${status:-unknown})" >&2
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml logs user-service --tail=80 >&2
+            exit 1
+          EOF

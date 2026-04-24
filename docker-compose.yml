@@ -25,8 +25,8 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_service
       SERVER_PORT: 8081
-    ports:
-      - "8081:8081"
+    expose:
+      - "8081"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
       interval: 10s

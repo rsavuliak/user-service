@@ -1,11 +1,15 @@
 # Local-dev-only overrides. Compose auto-loads this file next to docker-compose.yml.
 # The deploy workflow excludes it from the rsync so production does NOT get these mappings.
 #
-# Why: the production droplet already has another Postgres bound to host port 5433
-# (auth-service's DB), so we do not expose this Postgres on the host in production.
-# Locally it is convenient to connect from the host (psql, IDE, ./mvnw spring-boot:run).
+# Why: in production (docker-compose.prod.yml) nginx-proxy terminates TLS and reaches
+# the user-service container over gateway-network, so no host ports are needed.
+# Locally it is convenient to connect from the host (psql, IDE, curl, browser).
 
 services:
   postgres:
     ports:
       - "5433:5432"
+
+  user-service:
+    ports:
+      - "8081:8081"

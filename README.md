@@ -108,7 +108,9 @@ Key packages:
 
 ## Deployment
 
-CI/CD: `.github/workflows/deploy.yml` — push to `main` runs `./mvnw verify`, then SSHes to the DigitalOcean droplet, rsyncs the repo to `/home/deploy/user-service`, and runs `docker compose up -d --build`. A post-deploy readiness probe fails the job if `/actuator/health/readiness` doesn't come UP within 60 s.
+CI/CD: `.github/workflows/deploy.yml` — push to `main` runs `./mvnw verify`, then SSHes to the DigitalOcean droplet, rsyncs the repo to `/home/deploy/user-service`, and runs `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`. A post-deploy readiness probe waits for the container healthcheck to flip to `healthy` before marking the job green.
+
+The production overlay (`docker-compose.prod.yml`) joins the app container to the shared `gateway-network` so `nginx-proxy` + `acme-companion` can terminate TLS at `https://users.savuliak.com`. No host ports are published in production — the frontend hits the service only via nginx-proxy.
 
 **Required GitHub repo secrets** (Settings → Secrets and variables → Actions):
 
